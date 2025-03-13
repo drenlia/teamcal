@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.fc {
+  --fc-border-color: theme('colors.gray.200');
+  --fc-button-bg-color: theme('colors.blue.500');
+  --fc-button-border-color: theme('colors.blue.500');
+  --fc-button-hover-bg-color: theme('colors.blue.600');
+  --fc-button-hover-border-color: theme('colors.blue.600');
+  --fc-button-active-bg-color: theme('colors.blue.700');
+  --fc-button-active-border-color: theme('colors.blue.700');
+}
+
+.fc .fc-button {
+  @apply px-4 py-2 rounded-lg text-sm font-medium transition-colors;
+}
+
+.fc .fc-toolbar-title {
+  @apply text-xl font-bold text-gray-900;
+}
+
+.fc .fc-event {
+  @apply cursor-pointer transition-all hover:shadow-md;
+}
+
+.fc .fc-timegrid-slot {
+  @apply h-12;
+}
+
+.fc .fc-timegrid-slot-label {
+  @apply text-sm text-gray-600;
+}
+
+.fc .fc-day-today {
+  @apply bg-blue-50;
+}
+
+.fc .fc-highlight {
+  @apply bg-blue-100;
+}
+
+/* Improve month view spacing */
+.fc .fc-daygrid-event {
+  @apply my-0.5 h-6;
+}
+
+.fc .fc-daygrid-day-events {
+  @apply px-0.5;
+}
+
+/* Consistent event rendering across views */
+.fc-direction-ltr .fc-daygrid-event.fc-event-end {
+  @apply mr-0;
+}
+
+.fc-direction-ltr .fc-daygrid-event.fc-event-start {
+  @apply ml-0;
+}
+
+/* Better spacing for multi-day events */
+.fc .fc-daygrid-block-event .fc-event-time {
+  @apply font-normal text-sm opacity-75;
+}
+
+/* Resize handles */
+.fc .fc-event-resizer {
+  @apply opacity-0 w-4 h-full top-0 bottom-0 z-10;
+}
+
+.fc .fc-event-resizer-start {
+  @apply cursor-w-resize left-0;
+}
+
+.fc .fc-event-resizer-end {
+  @apply cursor-e-resize right-0;
+}
+
+.fc .fc-event:hover .fc-event-resizer {
+  @apply opacity-100;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .print-calendar {
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: none !important;
+  }
+
+  .fc .fc-toolbar {
+    margin-bottom: 1.5rem !important;
+  }
+
+  .fc .fc-event {
+    page-break-inside: avoid;
+  }
+
+  .fc .fc-event:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .fc .fc-button {
+    background: none !important;
+    color: #000 !important;
+    border: 1px solid #000 !important;
+  }
+
+  @page {
+    size: landscape;
+    margin: 1cm;
+  }
+}
