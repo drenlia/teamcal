@@ -4,7 +4,7 @@ This application allows a team to schedule shifts with ease.
 
 In this context, a shift is defined as beginning at a specific time on one day and concluding at a designated time on the final day, allowing for multi-day coverage until the shift officially ends (i.e geriatric healthcare professionals).
 
-See a [screenshot](https://src.drenlia.dev/devs/teamcal/-/blob/master/Team-Scheduler-ScreenShot.png)
+See a [screenshot](/Team-Scheduler-ScreenShot.png)
 
 ## Getting started
 
