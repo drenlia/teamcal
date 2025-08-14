@@ -32,6 +32,8 @@ npm run dev
 ```
 The frontend service will be listening on system IP and port 3004
 
+if installed on your computer, access http://localhost:3004 in a browser.
+
 You can change this port by editing `vite.config.ts` file
 
 ## IMPORTANT
