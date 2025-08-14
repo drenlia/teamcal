@@ -38,7 +38,7 @@ You can change this port by editing `vite.config.ts` file
 
 ## IMPORTANT
 
-If you run this application on a network, make sure that you secure access by adding htaccess or other means.
+If you expose this application on the network, make sure that you secure access by adding htaccess or other means.
 No security has been implemented, meaning anyone having access to your application will be able to view or update the data!
 
 ## Authors and acknowledgment
