@@ -4,7 +4,7 @@ This application allows a team to schedule shifts with ease.
 
 In this context, a shift is defined as beginning at a specific time on one day and concluding at a designated time on the final day, allowing for multi-day coverage until the shift officially ends (i.e geriatric healthcare professionals).
 
-See a [screenshot](/Team-Scheduler-ScreenShot.png)
+<img src="/Team-Scheduler-ScreenShot.png" alt="Screenshot of teamcal" width="100%">
 
 ## Getting started
 
@@ -40,7 +40,7 @@ If you run this application on a network, make sure that you secure access by ad
 No security has been implemented, meaning anyone having access to your application will be able to view or update the data!
 
 ## Authors and acknowledgment
-Developped with AI assistance (bolt.new)
+Developped with AI assistance
 
 ## License
 No restrictions.  Use and modify as you please.
