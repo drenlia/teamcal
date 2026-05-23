@@ -47,7 +47,7 @@
 
 /* Improve month view spacing */
 .fc .fc-daygrid-event {
-  @apply my-0.5 h-6;
+  @apply my-0.5 h-6 relative;
 }
 
 .fc .fc-daygrid-day-events {
@@ -68,21 +68,78 @@
   @apply font-normal text-sm opacity-75;
 }
 
-/* Resize handles */
-.fc .fc-event-resizer {
-  @apply opacity-0 w-4 h-full top-0 bottom-0 z-10;
+/* Month view: custom resize grips (timed events cannot use built-in daygrid resize) */
+.teamcal-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  z-index: 20;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: ew-resize;
+  opacity: 0.4;
+  transition: opacity 0.15s ease;
 }
 
-.fc .fc-event-resizer-start {
-  @apply cursor-w-resize left-0;
+.teamcal-resize-handle::after {
+  content: '';
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
 }
 
-.fc .fc-event-resizer-end {
-  @apply cursor-e-resize right-0;
+.teamcal-resize-handle-start {
+  left: 0;
 }
 
-.fc .fc-event:hover .fc-event-resizer {
-  @apply opacity-100;
+.teamcal-resize-handle-end {
+  right: 0;
+}
+
+.fc .fc-event:hover .teamcal-resize-handle {
+  opacity: 1;
+}
+
+body.teamcal-resizing {
+  cursor: ew-resize;
+  user-select: none;
+}
+
+/* Week/day view: vertical resize bars at top and bottom */
+.fc .fc-v-event .fc-event-resizer {
+  left: 0;
+  right: 0;
+  width: auto;
+  height: var(--fc-event-resizer-thickness, 8px);
+  opacity: 0.45;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  transition: opacity 0.15s ease;
+}
+
+.fc .fc-v-event .fc-event-resizer-start {
+  top: 0;
+  cursor: n-resize;
+}
+
+.fc .fc-v-event .fc-event-resizer-end {
+  bottom: 0;
+  cursor: s-resize;
+}
+
+.fc .fc-v-event:hover .fc-event-resizer {
+  opacity: 1;
+}
+
+body.teamcal-resizing-v {
+  user-select: none;
 }
 
 /* Print styles */

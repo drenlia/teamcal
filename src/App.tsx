@@ -4,7 +4,14 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import type { DateSelectArg, EventClickArg, EventDropArg, EventResizeDoneArg, EventContentArg } from '@fullcalendar/core';
+import type {
+  DateSelectArg,
+  EventClickArg,
+  EventDropArg,
+  EventResizeDoneArg,
+  EventContentArg,
+  EventMountArg,
+} from '@fullcalendar/core';
 import { AlertCircle, Printer } from 'lucide-react';
 import type { Team, ScheduleEvent } from './types';
 import TeamForm from './components/TeamForm';
@@ -16,11 +23,8 @@ import { useOperations } from './hooks/useOperations';
 import * as api from './services/api';
 import { fromLocalDateString } from './utils/dateUtils';
 import { combineDateAndTime } from './utils/eventDates';
-import {
-  toFullCalendarEvent,
-  getEventDates,
-  getEventDescription,
-} from './utils/calendarEvents';
+import { toFullCalendarEvent, getEventDates } from './utils/calendarEvents';
+import { attachMonthResizeHandles } from './utils/monthEventResize';
 import { generateId } from './utils/id';
 
 function App() {
@@ -209,23 +213,23 @@ function App() {
     }
   };
 
-  const persistEventMove = useCallback(
+  const persistEventDates = useCallback(
     async (
-      changeInfo: EventDropArg | EventResizeDoneArg,
-      dates: { start: Date; end: Date }
+      eventId: string,
+      dates: { start: Date; end: Date },
+      revert?: () => void
     ) => {
-      const { event } = changeInfo;
-      const previous = events.find((e) => e.id === event.id);
-      const description = getEventDescription(event, events);
+      const previous = events.find((e) => e.id === eventId);
+      const description = previous?.description ?? '';
 
       setEvents((prev) =>
         prev.map((e) =>
-          e.id === event.id ? { ...e, start: dates.start, end: dates.end } : e
+          e.id === eventId ? { ...e, start: dates.start, end: dates.end } : e
         )
       );
 
       try {
-        await api.updateEvent(event.id, {
+        await api.updateEvent(eventId, {
           start: dates.start,
           end: dates.end,
           description,
@@ -236,17 +240,28 @@ function App() {
         if (previous) {
           setEvents((prev) =>
             prev.map((e) =>
-              e.id === event.id
+              e.id === eventId
                 ? { ...e, start: previous.start, end: previous.end }
                 : e
             )
           );
         }
-        changeInfo.revert();
+        revert?.();
         setError('Failed to update event. Please try again.');
       }
     },
     [events]
+  );
+
+  const persistEventMove = useCallback(
+    async (
+      changeInfo: EventDropArg | EventResizeDoneArg,
+      dates: { start: Date; end: Date }
+    ) => {
+      const { event } = changeInfo;
+      await persistEventDates(event.id, dates, () => changeInfo.revert());
+    },
+    [persistEventDates]
   );
 
   const handleEventDrop = useCallback(
@@ -272,6 +287,25 @@ function App() {
     },
     [persistEventMove]
   );
+
+  const handleEventDidMount = useCallback(
+    (info: EventMountArg) => {
+      const cleanup = attachMonthResizeHandles(info, (eventId, start, end) => {
+        void persistEventDates(eventId, { start, end });
+      });
+      if (cleanup) {
+        (info.el as HTMLElement & { _teamcalResizeCleanup?: () => void })._teamcalResizeCleanup =
+          cleanup;
+      }
+    },
+    [persistEventDates]
+  );
+
+  const handleEventWillUnmount = useCallback((info: EventMountArg) => {
+    const el = info.el as HTMLElement & { _teamcalResizeCleanup?: () => void };
+    el._teamcalResizeCleanup?.();
+    delete el._teamcalResizeCleanup;
+  }, []);
 
   const handlePrint = () => {
     window.print();
@@ -397,6 +431,8 @@ function App() {
             expandRows={true}
             height="auto"
             eventContent={eventContent}
+            eventDidMount={handleEventDidMount}
+            eventWillUnmount={handleEventWillUnmount}
             timeZone="local"
           />
         </div>
