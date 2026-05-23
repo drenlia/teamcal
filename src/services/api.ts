@@ -36,7 +36,7 @@ export async function fetchEvents(): Promise<ScheduleEvent[]> {
     }
     const events = await response.json();
     onOperation?.('query', 'Fetched all events', 'success');
-    return events.map((event: any) => ({
+    return events.map((event: ScheduleEvent & { start: string; end: string }) => ({
       ...event,
       start: new Date(event.start),
       end: new Date(event.end)

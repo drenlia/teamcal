@@ -24,6 +24,11 @@
   @apply cursor-pointer transition-all hover:shadow-md;
 }
 
+/* Let FullCalendar handle drag/resize on the event shell, not custom content */
+.fc .fc-event-main {
+  pointer-events: none;
+}
+
 .fc .fc-timegrid-slot {
   @apply h-12;
 }
