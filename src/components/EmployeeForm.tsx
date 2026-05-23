@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { PlusCircle } from 'lucide-react';
 import type { Employee } from '../types';
 import { EMPLOYEE_COLORS } from '../utils/colors';
+import { generateId } from '../utils/id';
 
 interface Props {
   onAddEmployee: (employee: Employee) => void;
@@ -26,7 +27,7 @@ export default function EmployeeForm({ onAddEmployee, usedColors }: Props) {
         : Math.floor(Math.random() * EMPLOYEE_COLORS.length);
 
       const employee: Employee = {
-        id: crypto.randomUUID(),
+        id: generateId(),
         name: name.trim(),
         colors: EMPLOYEE_COLORS[colorIndex],
         colorIndex

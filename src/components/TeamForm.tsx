@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { PlusCircle } from 'lucide-react';
 import type { Team } from '../types';
 import { TEAM_COLORS } from '../utils/colors';
+import { generateId } from '../utils/id';
 
 interface Props {
   onAddTeam: (team: Team) => void;
@@ -26,7 +27,7 @@ export default function TeamForm({ onAddTeam, usedColors }: Props) {
         : Math.floor(Math.random() * TEAM_COLORS.length);
 
       const team: Team = {
-        id: crypto.randomUUID(),
+        id: generateId(),
         name: name.trim(),
         colors: TEAM_COLORS[colorIndex],
         colorIndex

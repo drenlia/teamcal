@@ -21,6 +21,7 @@ import {
   getEventDates,
   getEventDescription,
 } from './utils/calendarEvents';
+import { generateId } from './utils/id';
 
 function App() {
   const { t, i18n } = useTranslation();
@@ -131,7 +132,7 @@ function App() {
     }
 
     const event: ScheduleEvent = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       title: team.name,
       start,
       end,
@@ -317,33 +318,33 @@ function App() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white p-6 rounded-xl shadow-sm no-print">
-          <div className="flex justify-between items-center mb-6">
-            <div className="space-y-4">
+          <div className="space-y-4 mb-6">
+            <div className="flex flex-wrap justify-between items-center gap-4">
               <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
-              <TeamForm
-                onAddTeam={handleAddTeam}
-                usedColors={usedColors}
-              />
-              {error && (
-                <div className="text-red-600 text-sm">{error}</div>
-              )}
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+                <TimeSettings
+                  defaultStart={defaultStart}
+                  defaultEnd={defaultEnd}
+                  onStartChange={setDefaultStart}
+                  onEndChange={setDefaultEnd}
+                />
+                <LanguageToggle />
+                <button
+                  onClick={handlePrint}
+                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <Printer size={20} />
+                  <span>{t('buttons.print')}</span>
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-6">
-              <TimeSettings
-                defaultStart={defaultStart}
-                defaultEnd={defaultEnd}
-                onStartChange={setDefaultStart}
-                onEndChange={setDefaultEnd}
-              />
-              <LanguageToggle />
-              <button
-                onClick={handlePrint}
-                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <Printer size={20} />
-                <span>{t('buttons.print')}</span>
-              </button>
-            </div>
+            <TeamForm
+              onAddTeam={handleAddTeam}
+              usedColors={usedColors}
+            />
+            {error && (
+              <div className="text-red-600 text-sm">{error}</div>
+            )}
           </div>
           
           <TeamList

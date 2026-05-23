@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { X } from 'lucide-react';
+import { generateId } from '../utils/id';
 
 interface Toast {
   id: string;
@@ -17,7 +18,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const showToast = useCallback((message: string, type: 'success' | 'error') => {
-    const id = crypto.randomUUID();
+    const id = generateId();
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(toast => toast.id !== id));

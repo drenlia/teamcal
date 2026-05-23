@@ -16,7 +16,7 @@ i18n
       }
     },
     fallbackLng: 'en',
-    lng: 'pt',
+    lng: 'en',
     interpolation: {
       escapeValue: false
     },
