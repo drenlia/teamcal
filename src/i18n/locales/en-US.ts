@@ -5,7 +5,24 @@ export const enUS = {
     button: 'Add Member'
   },
   timeSettings: {
-    to: 'to'
+    to: 'to',
+    label: 'Default shift hours'
+  },
+  timeInput: {
+    hour: 'Hour',
+    minute: 'Minute',
+    period: 'AM/PM',
+    am: 'AM',
+    pm: 'PM',
+    start: 'Start time',
+    end: 'End time',
+    endBeforeStart: 'End time should be after start time on the same day.',
+    presets: {
+      day: 'Day (7a–3p)',
+      standard: 'Standard (9a–5p)',
+      evening: 'Evening (3p–11p)',
+      night: 'Night (11p–7a)'
+    }
   },
   buttons: {
     print: 'Print Calendar',
@@ -25,6 +42,8 @@ export const enUS = {
     title: 'Edit Event Time',
     start: 'Start',
     end: 'End',
+    date: 'Date',
+    quickShifts: 'Quick shift times',
     description: 'Description',
     descriptionPlaceholder: 'Add event description...'
   },
