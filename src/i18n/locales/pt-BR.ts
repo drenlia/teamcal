@@ -27,7 +27,8 @@ export const ptBR = {
   buttons: {
     print: 'Imprimir Calendário',
     cancel: 'Cancelar',
-    save: 'Salvar'
+    save: 'Salvar',
+    delete: 'Excluir',
   },
   warnings: {
     selectTeam: 'Por favor, selecione um membro do time antes de agendar'
@@ -45,13 +46,20 @@ export const ptBR = {
     date: 'Data',
     quickShifts: 'Turnos rápidos',
     description: 'Descrição',
-    descriptionPlaceholder: 'Adicione a descrição do evento...'
+    descriptionPlaceholder: 'Adicione a descrição do evento...',
+    delete: 'Excluir turno',
+    deleteConfirmTitle: 'Excluir este turno?',
+    deleteConfirmMessage:
+      'Este turno será removido da agenda. Esta ação não pode ser desfeita.',
   },
   language: {
-    en: 'Inglês',
-    pt: 'Português'
+    label: 'Idioma',
+    en: 'English',
+    pt: 'Português',
+    fr: 'Français',
   },
   notifications: {
+    loadError: 'Não foi possível carregar a agenda. Atualize a página.',
     teamAdded: 'Membro adicionado com sucesso',
     teamAddError: 'Falha ao adicionar membro',
     teamRemoved: 'Membro removido com sucesso',

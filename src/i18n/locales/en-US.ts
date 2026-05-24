@@ -27,7 +27,8 @@ export const enUS = {
   buttons: {
     print: 'Print Calendar',
     cancel: 'Cancel',
-    save: 'Save'
+    save: 'Save',
+    delete: 'Delete',
   },
   warnings: {
     selectTeam: 'Please select a team member before scheduling'
@@ -45,13 +46,20 @@ export const enUS = {
     date: 'Date',
     quickShifts: 'Quick shift times',
     description: 'Description',
-    descriptionPlaceholder: 'Add event description...'
+    descriptionPlaceholder: 'Add event description...',
+    delete: 'Delete shift',
+    deleteConfirmTitle: 'Delete this shift?',
+    deleteConfirmMessage:
+      'This shift will be removed from the schedule. This cannot be undone.',
   },
   language: {
+    label: 'Language',
     en: 'English',
-    pt: 'Portuguese'
+    pt: 'Português',
+    fr: 'Français',
   },
   notifications: {
+    loadError: 'Could not load the schedule. Please refresh the page.',
     teamAdded: 'Team member added successfully',
     teamAddError: 'Failed to add team member',
     teamRemoved: 'Team member removed successfully',

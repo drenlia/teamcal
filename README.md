@@ -15,7 +15,7 @@ In this context, a shift is defined as beginning at a specific time on one day a
 1. Drag and drop and edit calendar entries.
 1. Monthly/Weekly/Day views.
 1. Printable calendar (without the heading).
-1. languages: English/Portuguese (Portuguese by default).
+1. languages: English, Portuguese, and French (browser language detected; English fallback).
 1. Backend db using sqlite - data is always saved.
 
 ## Requirements
