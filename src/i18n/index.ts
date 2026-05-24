@@ -16,7 +16,7 @@ i18n
       }
     },
     fallbackLng: 'en',
-    lng: 'en', // Force Portuguese as default
+    lng: 'en',
     interpolation: {
       escapeValue: false
     },

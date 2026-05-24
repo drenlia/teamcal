@@ -1,23 +1,31 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import { X, AlertCircle, Printer } from 'lucide-react';
+import type {
+  DateSelectArg,
+  EventClickArg,
+  EventDropArg,
+  EventResizeDoneArg,
+  EventContentArg,
+  EventMountArg,
+} from '@fullcalendar/core';
+import { AlertCircle, Printer } from 'lucide-react';
 import type { Team, ScheduleEvent } from './types';
 import TeamForm from './components/TeamForm';
 import TeamList from './components/TeamList';
 import EventDialog from './components/EventDialog';
 import TimeSettings from './components/TimeSettings';
-import EventContent from './components/EventContent';
 import LanguageToggle from './components/LanguageToggle';
-import DebugPanel from './components/DebugPanel';
 import { useOperations } from './hooks/useOperations';
 import * as api from './services/api';
-import Tippy from '@tippyjs/react';
-import 'tippy.js/dist/tippy.css';
-import { toLocalDateString, fromLocalDateString } from './utils/dateUtils';
+import { fromLocalDateString } from './utils/dateUtils';
+import { combineDateAndTime } from './utils/eventDates';
+import { toFullCalendarEvent, getEventDates } from './utils/calendarEvents';
+import { attachMonthResizeHandles } from './utils/monthEventResize';
+import { generateId } from './utils/id';
 
 function App() {
   const { t, i18n } = useTranslation();
@@ -29,7 +37,7 @@ function App() {
   const [usedColors, setUsedColors] = useState<Set<number>>(new Set());
   const [showSelectionWarning, setShowSelectionWarning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { operations, addOperation } = useOperations();
+  const { addOperation } = useOperations();
   
   // Event editing state
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
@@ -98,7 +106,12 @@ function App() {
     return newDate;
   };
 
-  const handleDateSelect = useCallback(async (selectInfo: any) => {
+  const calendarEvents = useMemo(
+    () => events.map(toFullCalendarEvent),
+    [events]
+  );
+
+  const handleDateSelect = useCallback(async (selectInfo: DateSelectArg) => {
     if (!selectedTeam) {
       setShowSelectionWarning(true);
       setTimeout(() => setShowSelectionWarning(false), 3000);
@@ -123,7 +136,7 @@ function App() {
     }
 
     const event: ScheduleEvent = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       title: team.name,
       start,
       end,
@@ -144,7 +157,7 @@ function App() {
     }
   }, [selectedTeam, teams, defaultStart, defaultEnd]);
 
-  const handleEventClick = (clickInfo: any) => {
+  const handleEventClick = (clickInfo: EventClickArg) => {
     const event = events.find(e => e.id === clickInfo.event.id);
     if (!event) return;
 
@@ -152,17 +165,6 @@ function App() {
     setEventStartTime(event.start.toTimeString().slice(0, 5));
     setEventEndTime(event.end.toTimeString().slice(0, 5));
     setEventDescription(event.description || '');
-  };
-
-  const handleRemoveEvent = async (eventId: string) => {
-    try {
-      await api.deleteEvent(eventId);
-      setEvents(prev => prev.filter(event => event.id !== eventId));
-      setError(null);
-    } catch (err) {
-      console.error('Failed to remove event:', err);
-      setError('Failed to remove event. Please try again.');
-    }
   };
 
   const handleStartDateChange = (dateStr: string) => {
@@ -186,20 +188,8 @@ function App() {
   const handleSaveEventTime = async () => {
     if (!editingEvent) return;
 
-    // Create dates in local timezone
-    const startDate = new Date(editingEvent.start.toLocaleDateString());
-    const endDate = new Date(editingEvent.end.toLocaleDateString());
-    
-    // Set the times
-    const [startHours, startMinutes] = eventStartTime.split(':');
-    const [endHours, endMinutes] = eventEndTime.split(':');
-    
-    startDate.setHours(Number(startHours), Number(startMinutes));
-    endDate.setHours(Number(endHours), Number(endMinutes));
-
-    // Convert to UTC for saving
-    const newStart = new Date(startDate.getTime());
-    const newEnd = new Date(endDate.getTime());
+    const newStart = combineDateAndTime(editingEvent.start, eventStartTime);
+    const newEnd = combineDateAndTime(editingEvent.end, eventEndTime);
 
     try {
       await api.updateEvent(editingEvent.id, { 
@@ -223,132 +213,172 @@ function App() {
     }
   };
 
-  const handleEventDrop = async (dropInfo: any) => {
-    const { event } = dropInfo;
-    try {
-      await api.updateEvent(event.id, {
-        start: new Date(event.start),
-        end: new Date(event.end),
-        description: event.extendedProps.description
-      });
-      setEvents(prev => prev.map(e =>
-        e.id === event.id
-          ? {
-              ...e,
-              start: new Date(event.start),
-              end: new Date(event.end)
-            }
-          : e
-      ));
-      setError(null);
-    } catch (err) {
-      console.error('Failed to update event:', err);
-      dropInfo.revert();
-      setError('Failed to update event. Please try again.');
-    }
-  };
+  const persistEventDates = useCallback(
+    async (
+      eventId: string,
+      dates: { start: Date; end: Date },
+      revert?: () => void
+    ) => {
+      const previous = events.find((e) => e.id === eventId);
+      const description = previous?.description ?? '';
 
-  const handleEventResize = async (resizeInfo: any) => {
-    const { event } = resizeInfo;
-    try {
-      await api.updateEvent(event.id, {
-        start: new Date(event.start),
-        end: new Date(event.end),
-        description: event.extendedProps.description
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === eventId ? { ...e, start: dates.start, end: dates.end } : e
+        )
+      );
+
+      try {
+        await api.updateEvent(eventId, {
+          start: dates.start,
+          end: dates.end,
+          description,
+        });
+        setError(null);
+      } catch (err) {
+        console.error('Failed to update event:', err);
+        if (previous) {
+          setEvents((prev) =>
+            prev.map((e) =>
+              e.id === eventId
+                ? { ...e, start: previous.start, end: previous.end }
+                : e
+            )
+          );
+        }
+        revert?.();
+        setError('Failed to update event. Please try again.');
+      }
+    },
+    [events]
+  );
+
+  const persistEventMove = useCallback(
+    async (
+      changeInfo: EventDropArg | EventResizeDoneArg,
+      dates: { start: Date; end: Date }
+    ) => {
+      const { event } = changeInfo;
+      await persistEventDates(event.id, dates, () => changeInfo.revert());
+    },
+    [persistEventDates]
+  );
+
+  const handleEventDrop = useCallback(
+    async (dropInfo: EventDropArg) => {
+      const dates = getEventDates(dropInfo.event);
+      if (!dates) {
+        dropInfo.revert();
+        return;
+      }
+      await persistEventMove(dropInfo, dates);
+    },
+    [persistEventMove]
+  );
+
+  const handleEventResize = useCallback(
+    async (resizeInfo: EventResizeDoneArg) => {
+      const dates = getEventDates(resizeInfo.event);
+      if (!dates) {
+        resizeInfo.revert();
+        return;
+      }
+      await persistEventMove(resizeInfo, dates);
+    },
+    [persistEventMove]
+  );
+
+  const handleEventDidMount = useCallback(
+    (info: EventMountArg) => {
+      const cleanup = attachMonthResizeHandles(info, (eventId, start, end) => {
+        void persistEventDates(eventId, { start, end });
       });
-      setEvents(prev => prev.map(e =>
-        e.id === event.id
-          ? {
-              ...e,
-              start: new Date(event.start),
-              end: new Date(event.end)
-            }
-          : e
-      ));
-      setError(null);
-    } catch (err) {
-      console.error('Failed to update event:', err);
-      resizeInfo.revert();
-      setError('Failed to update event. Please try again.');
-    }
-  };
+      if (cleanup) {
+        (info.el as HTMLElement & { _teamcalResizeCleanup?: () => void })._teamcalResizeCleanup =
+          cleanup;
+      }
+    },
+    [persistEventDates]
+  );
+
+  const handleEventWillUnmount = useCallback((info: EventMountArg) => {
+    const el = info.el as HTMLElement & { _teamcalResizeCleanup?: () => void };
+    el._teamcalResizeCleanup?.();
+    delete el._teamcalResizeCleanup;
+  }, []);
 
   const handlePrint = () => {
     window.print();
   };
 
-  const eventContent = (eventInfo: any) => {
-    const event = events.find(e => e.id === eventInfo.event.id);
-    const team = teams.find(t => t.id === eventInfo.event.extendedProps.employeeId);
-    
-    // Get start and end times
-    const startStr = eventInfo.event.start.toLocaleTimeString('en-US', { 
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true 
-    });
-    const endStr = eventInfo.event.end.toLocaleTimeString('en-US', { 
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true 
-    });
+  const eventContent = useCallback(
+    (eventInfo: EventContentArg) => {
+      const scheduleEvent = events.find((e) => e.id === eventInfo.event.id);
+      const employeeId =
+        eventInfo.event.extendedProps.employeeId ?? scheduleEvent?.employeeId;
+      const team = teams.find((t) => t.id === employeeId);
+      const description = scheduleEvent?.description?.trim() || '?';
 
-    // Check if this is the last segment of the event
-    const isLastSegment = eventInfo.isEnd;
-    // Check if this is the first segment of the event
-    const isFirstSegment = eventInfo.isStart;
-    
-    return (
-      <Tippy 
-        content={event?.description || '?'}
-        placement="top"
-        theme="light-border"
-        delay={[200, 0]}
-      >
-        <div className="flex items-center w-full px-1">
-          <div className="flex-grow flex items-center">
-            <span className="font-bold mr-1">{team?.name}</span>
-            {isFirstSegment && <span>{startStr}</span>}
+      const startStr = eventInfo.event.start?.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+      const endStr = eventInfo.event.end?.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+
+      return (
+        <div
+          className="flex items-center w-full px-1 pointer-events-none"
+          title={description}
+        >
+          <div className="flex-grow flex items-center min-w-0">
+            <span className="font-bold mr-1 truncate">{team?.name}</span>
+            {eventInfo.isStart && startStr && <span className="truncate">{startStr}</span>}
           </div>
           <div className="flex-shrink-0">
-            {isLastSegment && endStr}
+            {eventInfo.isEnd && endStr}
           </div>
         </div>
-      </Tippy>
-    );
-  };
+      );
+    },
+    [events, teams]
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white p-6 rounded-xl shadow-sm no-print">
-          <div className="flex justify-between items-center mb-6">
-            <div className="space-y-4">
+          <div className="space-y-4 mb-6">
+            <div className="flex flex-wrap justify-between items-center gap-4">
               <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
-              <TeamForm
-                onAddTeam={handleAddTeam}
-                usedColors={usedColors}
-              />
-              {error && (
-                <div className="text-red-600 text-sm">{error}</div>
-              )}
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+                <TimeSettings
+                  defaultStart={defaultStart}
+                  defaultEnd={defaultEnd}
+                  onStartChange={setDefaultStart}
+                  onEndChange={setDefaultEnd}
+                />
+                <LanguageToggle />
+                <button
+                  onClick={handlePrint}
+                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <Printer size={20} />
+                  <span>{t('buttons.print')}</span>
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-6">
-              <TimeSettings
-                defaultStart={defaultStart}
-                defaultEnd={defaultEnd}
-                onStartChange={setDefaultStart}
-                onEndChange={setDefaultEnd}
-              />
-              <LanguageToggle />
-              <button
-                onClick={handlePrint}
-                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <Printer size={20} />
-                <span>{t('buttons.print')}</span>
-              </button>
-            </div>
+            <TeamForm
+              onAddTeam={handleAddTeam}
+              usedColors={usedColors}
+            />
+            {error && (
+              <div className="text-red-600 text-sm">{error}</div>
+            )}
           </div>
           
           <TeamList
@@ -383,11 +413,14 @@ function App() {
               day: t('calendar.day')
             }}
             editable={true}
+            eventStartEditable={true}
+            eventDurationEditable={true}
+            eventResizableFromStart={true}
             selectable={!!selectedTeam}
             selectMirror={true}
             dayMaxEvents={true}
             weekends={true}
-            events={events}
+            events={calendarEvents}
             select={handleDateSelect}
             eventClick={handleEventClick}
             eventDrop={handleEventDrop}
@@ -398,6 +431,8 @@ function App() {
             expandRows={true}
             height="auto"
             eventContent={eventContent}
+            eventDidMount={handleEventDidMount}
+            eventWillUnmount={handleEventWillUnmount}
             timeZone="local"
           />
         </div>
@@ -420,9 +455,6 @@ function App() {
         }}
         onSave={handleSaveEventTime}
       />
-{/*
-      <DebugPanel operations={operations} />
-*/}
     </div>
   );
 }

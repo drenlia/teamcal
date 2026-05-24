@@ -2,8 +2,6 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock, Calendar } from 'lucide-react';
 import { ScheduleEvent } from '../types';
-import { toLocalDateString } from '../utils/dateUtils';
-
 interface EventDialogProps {
   isOpen: boolean;
   startTime: string;

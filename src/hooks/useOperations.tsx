@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { generateId } from '../utils/id';
 
 export interface Operation {
   id: string;
@@ -19,7 +20,7 @@ export function useOperations() {
     error?: string
   ) => {
     const operation: Operation = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       type,
       description,
       status,
