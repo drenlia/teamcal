@@ -12,23 +12,27 @@ import type {
   EventContentArg,
   EventMountArg,
 } from '@fullcalendar/core';
-import { AlertCircle, Printer } from 'lucide-react';
+import { AlertCircle, Printer, X } from 'lucide-react';
 import type { Team, ScheduleEvent } from './types';
 import TeamForm from './components/TeamForm';
 import TeamList from './components/TeamList';
 import EventDialog from './components/EventDialog';
 import TimeSettings from './components/TimeSettings';
-import LanguageToggle from './components/LanguageToggle';
+import LanguageSwitcher from './components/LanguageSwitcher';
 import { useOperations } from './hooks/useOperations';
+import { useToast } from './hooks/useToast';
 import * as api from './services/api';
 import { fromLocalDateString } from './utils/dateUtils';
 import { combineDateAndTime } from './utils/eventDates';
 import { toFullCalendarEvent, getEventDates } from './utils/calendarEvents';
 import { attachMonthResizeHandles } from './utils/monthEventResize';
+import { getFullCalendarLocale } from './utils/fullCalendarLocale';
+import { normalizeLanguage } from './i18n/languages';
 import { generateId } from './utils/id';
 
 function App() {
   const { t, i18n } = useTranslation();
+  const { showToast } = useToast();
   const [teams, setTeams] = useState<Team[]>([]);
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string>('');
@@ -36,14 +40,26 @@ function App() {
   const [defaultEnd, setDefaultEnd] = useState('17:00');
   const [usedColors, setUsedColors] = useState<Set<number>>(new Set());
   const [showSelectionWarning, setShowSelectionWarning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { addOperation } = useOperations();
-  
-  // Event editing state
+
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
   const [eventStartTime, setEventStartTime] = useState('');
   const [eventEndTime, setEventEndTime] = useState('');
   const [eventDescription, setEventDescription] = useState('');
+
+  const calendarLocale = useMemo(
+    () => getFullCalendarLocale(i18n.language),
+    [i18n.language]
+  );
+
+  const timeLocale = useMemo(() => {
+    const lang = normalizeLanguage(i18n.language);
+    if (lang === 'pt') return 'pt-BR';
+    if (lang === 'fr') return 'fr-FR';
+    return 'en-US';
+  }, [i18n.language]);
+
+  const use12HourClock = normalizeLanguage(i18n.language) === 'en';
 
   useEffect(() => {
     api.setOperationHandler(addOperation);
@@ -51,51 +67,51 @@ function App() {
       try {
         const [loadedTeams, loadedEvents] = await Promise.all([
           api.fetchTeams(),
-          api.fetchEvents()
+          api.fetchEvents(),
         ]);
         setTeams(loadedTeams);
         setEvents(loadedEvents);
-        setUsedColors(new Set(loadedTeams.map(team => team.colorIndex)));
+        setUsedColors(new Set(loadedTeams.map((team) => team.colorIndex)));
       } catch (err) {
         console.error('Failed to load data:', err);
-        // Continue with empty state if data fails to load
+        showToast(i18n.t('notifications.loadError'), 'error');
       }
     };
     loadData();
-  }, [addOperation]);
+  }, [addOperation, showToast, i18n]);
 
   const handleAddTeam = async (team: Team) => {
     try {
       await api.createTeam(team);
-      setTeams(prev => [...prev, team]);
-      setUsedColors(prev => new Set([...prev, team.colorIndex]));
-      setError(null);
+      setTeams((prev) => [...prev, team]);
+      setUsedColors((prev) => new Set([...prev, team.colorIndex]));
+      showToast(t('notifications.teamAdded'), 'success');
     } catch (err) {
       console.error('Failed to add team:', err);
-      setError('Failed to add team. Please try again.');
+      showToast(t('notifications.teamAddError'), 'error');
     }
   };
 
   const handleRemoveTeam = async (teamId: string) => {
     try {
       await api.deleteTeam(teamId);
-      const team = teams.find(t => t.id === teamId);
+      const team = teams.find((t) => t.id === teamId);
       if (team) {
-        setUsedColors(prev => {
+        setUsedColors((prev) => {
           const newSet = new Set(prev);
           newSet.delete(team.colorIndex);
           return newSet;
         });
       }
-      setTeams(prev => prev.filter(t => t.id !== teamId));
-      setEvents(prev => prev.filter(event => event.employeeId !== teamId));
+      setTeams((prev) => prev.filter((t) => t.id !== teamId));
+      setEvents((prev) => prev.filter((event) => event.employeeId !== teamId));
       if (selectedTeam === teamId) {
         setSelectedTeam('');
       }
-      setError(null);
+      showToast(t('notifications.teamRemoved'), 'success');
     } catch (err) {
       console.error('Failed to remove team:', err);
-      setError('Failed to remove team. Please try again.');
+      showToast(t('notifications.teamRemoveError'), 'error');
     }
   };
 
@@ -111,54 +127,57 @@ function App() {
     [events]
   );
 
-  const handleDateSelect = useCallback(async (selectInfo: DateSelectArg) => {
-    if (!selectedTeam) {
-      setShowSelectionWarning(true);
-      setTimeout(() => setShowSelectionWarning(false), 3000);
-      selectInfo.view.calendar.unselect();
-      return;
-    }
+  const handleDateSelect = useCallback(
+    async (selectInfo: DateSelectArg) => {
+      if (!selectedTeam) {
+        setShowSelectionWarning(true);
+        setTimeout(() => setShowSelectionWarning(false), 3000);
+        selectInfo.view.calendar.unselect();
+        return;
+      }
 
-    const team = teams.find(t => t.id === selectedTeam);
-    if (!team) return;
+      const team = teams.find((t) => t.id === selectedTeam);
+      if (!team) return;
 
-    const calendarApi = selectInfo.view.calendar;
-    calendarApi.unselect();
+      const calendarApi = selectInfo.view.calendar;
+      calendarApi.unselect();
 
-    let start = selectInfo.start;
-    let end = selectInfo.end;
+      let start = selectInfo.start;
+      let end = selectInfo.end;
 
-    if (selectInfo.view.type === 'dayGridMonth') {
-      start = setTimeOnDate(start, defaultStart);
-      const lastDay = new Date(end);
-      lastDay.setDate(lastDay.getDate() - 1);
-      end = setTimeOnDate(lastDay, defaultEnd);
-    }
+      if (selectInfo.view.type === 'dayGridMonth') {
+        start = setTimeOnDate(start, defaultStart);
+        const lastDay = new Date(end);
+        lastDay.setDate(lastDay.getDate() - 1);
+        end = setTimeOnDate(lastDay, defaultEnd);
+      }
 
-    const event: ScheduleEvent = {
-      id: generateId(),
-      title: team.name,
-      start,
-      end,
-      employeeId: team.id,
-      backgroundColor: team.colors.bg,
-      borderColor: team.colors.border,
-      textColor: team.colors.text,
-      allDay: false
-    };
+      const event: ScheduleEvent = {
+        id: generateId(),
+        title: team.name,
+        start,
+        end,
+        employeeId: team.id,
+        backgroundColor: team.colors.bg,
+        borderColor: team.colors.border,
+        textColor: team.colors.text,
+        allDay: false,
+      };
 
-    try {
-      await api.createEvent(event);
-      setEvents(prev => [...prev, event]);
-      setError(null);
-    } catch (err) {
-      console.error('Failed to create event:', err);
-      setError('Failed to create event. Please try again.');
-    }
-  }, [selectedTeam, teams, defaultStart, defaultEnd]);
+      try {
+        await api.createEvent(event);
+        setEvents((prev) => [...prev, event]);
+        showToast(t('notifications.eventAdded'), 'success');
+      } catch (err) {
+        console.error('Failed to create event:', err);
+        showToast(t('notifications.eventAddError'), 'error');
+      }
+    },
+    [selectedTeam, teams, defaultStart, defaultEnd, showToast, t]
+  );
 
   const handleEventClick = (clickInfo: EventClickArg) => {
-    const event = events.find(e => e.id === clickInfo.event.id);
+    const event = events.find((e) => e.id === clickInfo.event.id);
     if (!event) return;
 
     setEditingEvent(event);
@@ -167,22 +186,59 @@ function App() {
     setEventDescription(event.description || '');
   };
 
+  const handleDeleteEvent = useCallback(
+    async (eventId: string) => {
+      try {
+        await api.deleteEvent(eventId);
+        setEvents((prev) => prev.filter((e) => e.id !== eventId));
+        if (editingEvent?.id === eventId) {
+          setEditingEvent(null);
+          setEventDescription('');
+        }
+        showToast(t('notifications.eventRemoved'), 'success');
+      } catch (err) {
+        console.error('Failed to remove event:', err);
+        showToast(t('notifications.eventRemoveError'), 'error');
+      }
+    },
+    [editingEvent, showToast, t]
+  );
+
+  const handleQuickDelete = useCallback(
+    (eventId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      if (window.confirm(t('eventDialog.deleteConfirmMessage'))) {
+        void handleDeleteEvent(eventId);
+      }
+    },
+    [handleDeleteEvent, t]
+  );
+
   const handleStartDateChange = (dateStr: string) => {
     if (!editingEvent) return;
     const newDate = fromLocalDateString(dateStr, eventStartTime);
-    setEditingEvent(prev => prev ? {
-      ...prev,
-      start: newDate
-    } : null);
+    setEditingEvent((prev) =>
+      prev
+        ? {
+            ...prev,
+            start: newDate,
+          }
+        : null
+    );
   };
 
   const handleEndDateChange = (dateStr: string) => {
     if (!editingEvent) return;
     const newDate = fromLocalDateString(dateStr, eventEndTime);
-    setEditingEvent(prev => prev ? {
-      ...prev,
-      end: newDate
-    } : null);
+    setEditingEvent((prev) =>
+      prev
+        ? {
+            ...prev,
+            end: newDate,
+          }
+        : null
+    );
   };
 
   const handleSaveEventTime = async () => {
@@ -192,24 +248,26 @@ function App() {
     const newEnd = combineDateAndTime(editingEvent.end, eventEndTime);
 
     try {
-      await api.updateEvent(editingEvent.id, { 
+      await api.updateEvent(editingEvent.id, {
         start: newStart,
         end: newEnd,
-        description: eventDescription 
+        description: eventDescription,
       });
-      
-      setEvents(prev => prev.map(event =>
-        event.id === editingEvent.id
-          ? { ...event, start: newStart, end: newEnd, description: eventDescription }
-          : event
-      ));
-      
+
+      setEvents((prev) =>
+        prev.map((event) =>
+          event.id === editingEvent.id
+            ? { ...event, start: newStart, end: newEnd, description: eventDescription }
+            : event
+        )
+      );
+
       setEditingEvent(null);
       setEventDescription('');
-      setError(null);
+      showToast(t('notifications.eventUpdated'), 'success');
     } catch (err) {
       console.error('Failed to update event:', err);
-      setError('Failed to update event. Please try again.');
+      showToast(t('notifications.eventUpdateError'), 'error');
     }
   };
 
@@ -234,7 +292,6 @@ function App() {
           end: dates.end,
           description,
         });
-        setError(null);
       } catch (err) {
         console.error('Failed to update event:', err);
         if (previous) {
@@ -247,10 +304,10 @@ function App() {
           );
         }
         revert?.();
-        setError('Failed to update event. Please try again.');
+        showToast(t('notifications.eventUpdateError'), 'error');
       }
     },
-    [events]
+    [events, showToast, t]
   );
 
   const persistEventMove = useCallback(
@@ -319,33 +376,51 @@ function App() {
       const team = teams.find((t) => t.id === employeeId);
       const description = scheduleEvent?.description?.trim() || '?';
 
-      const startStr = eventInfo.event.start?.toLocaleTimeString('en-US', {
+      const timeFormat: Intl.DateTimeFormatOptions = {
         hour: 'numeric',
         minute: '2-digit',
-        hour12: true,
-      });
-      const endStr = eventInfo.event.end?.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      });
+        hour12: use12HourClock,
+      };
+
+      const startStr = eventInfo.event.start?.toLocaleTimeString(
+        timeLocale,
+        timeFormat
+      );
+      const endStr = eventInfo.event.end?.toLocaleTimeString(
+        timeLocale,
+        timeFormat
+      );
 
       return (
         <div
-          className="flex items-center w-full px-1 pointer-events-none"
+          className="flex items-center w-full px-1 group/event"
           title={description}
         >
-          <div className="flex-grow flex items-center min-w-0">
+          <div className="flex-grow flex items-center min-w-0 pointer-events-none">
             <span className="font-bold mr-1 truncate">{team?.name}</span>
-            {eventInfo.isStart && startStr && <span className="truncate">{startStr}</span>}
+            {eventInfo.isStart && startStr && (
+              <span className="truncate">{startStr}</span>
+            )}
           </div>
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 flex items-center gap-0.5 pointer-events-none">
             {eventInfo.isEnd && endStr}
           </div>
+          {eventInfo.isEnd && (
+            <button
+              type="button"
+              className="pointer-events-auto ml-0.5 p-0.5 rounded-full opacity-0 group-hover/event:opacity-100 hover:bg-white/90 transition-opacity shrink-0"
+              title={t('eventDialog.delete')}
+              aria-label={t('eventDialog.delete')}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => handleQuickDelete(eventInfo.event.id, e)}
+            >
+              <X size={12} className="text-red-600" />
+            </button>
+          )}
         </div>
       );
     },
-    [events, teams]
+    [events, teams, timeLocale, use12HourClock, handleQuickDelete, t]
   );
 
   return (
@@ -362,7 +437,7 @@ function App() {
                   onStartChange={setDefaultStart}
                   onEndChange={setDefaultEnd}
                 />
-                <LanguageToggle />
+                <LanguageSwitcher />
                 <button
                   onClick={handlePrint}
                   className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
@@ -372,15 +447,9 @@ function App() {
                 </button>
               </div>
             </div>
-            <TeamForm
-              onAddTeam={handleAddTeam}
-              usedColors={usedColors}
-            />
-            {error && (
-              <div className="text-red-600 text-sm">{error}</div>
-            )}
+            <TeamForm onAddTeam={handleAddTeam} usedColors={usedColors} />
           </div>
-          
+
           <TeamList
             teams={teams}
             selectedTeam={selectedTeam}
@@ -403,14 +472,14 @@ function App() {
             headerToolbar={{
               left: 'prev,next today',
               center: 'title',
-              right: 'dayGridMonth,timeGridWeek,timeGridDay'
+              right: 'dayGridMonth,timeGridWeek,timeGridDay',
             }}
-            locale={i18n.language}
+            locale={calendarLocale}
             buttonText={{
               today: t('calendar.today'),
               month: t('calendar.month'),
               week: t('calendar.week'),
-              day: t('calendar.day')
+              day: t('calendar.day'),
             }}
             editable={true}
             eventStartEditable={true}
@@ -454,6 +523,7 @@ function App() {
           setEventDescription('');
         }}
         onSave={handleSaveEventTime}
+        onDelete={() => editingEvent && void handleDeleteEvent(editingEvent.id)}
       />
     </div>
   );
