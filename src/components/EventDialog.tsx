@@ -51,6 +51,13 @@ export default function EventDialog({
     return event.start.toDateString() === event.end.toDateString();
   }, [event]);
 
+  const sameDay = useMemo(() => {
+    if (!event) return false;
+    return (
+      event.start.toDateString() === event.end.toDateString()
+    );
+  }, [event]);
+
   if (!isOpen || !event) return null;
 
   const dateInputClass =
