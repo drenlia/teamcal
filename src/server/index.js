@@ -1,105 +1,209 @@
 import express from 'express';
 import cors from 'cors';
-import Database from 'better-sqlite3';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import cookieParser from 'cookie-parser';
+import {
+  initializeDatabase,
+  dbPath,
+  mapTeamRow,
+  getTeamColors,
+  pickAvailableColorIndex,
+  TEAM_COLOR_PALETTE,
+} from './db.js';
+import {
+  SESSION_COOKIE,
+  SESSION_DAYS,
+  generateId,
+  hashPassword,
+  verifyPassword,
+  sessionExpiryDate,
+  createAuthMiddleware,
+  requireAdmin,
+  getSessionUser,
+  parseSessionCookie,
+} from './auth.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const dbPath = join(__dirname, 'schedule.db');
-
-// Initialize database
-function initializeDatabase() {
-  const db = new Database(dbPath);
-  
-  // Enable foreign keys
-  db.pragma('foreign_keys = ON');
-
-  // Create tables if they don't exist
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS teams (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      colorIndex INTEGER NOT NULL,
-      bgColor TEXT NOT NULL,
-      borderColor TEXT NOT NULL,
-      textColor TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS events (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
-      description TEXT,
-      start TEXT NOT NULL,
-      end TEXT NOT NULL,
-      teamId TEXT NOT NULL,
-      FOREIGN KEY (teamId) REFERENCES teams(id) ON DELETE CASCADE
-    );
-  `);
-
-  return db;
-}
-
-const db = initializeDatabase();
+const db = await initializeDatabase();
 const app = express();
+const requireAuth = createAuthMiddleware(db);
 
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
+app.use(cookieParser());
 app.use(express.json());
 
-// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
     error: 'An unexpected error occurred',
-    details: err.message
+    details: err.message,
   });
 });
 
-// Team endpoints
-app.get('/api/teams', (req, res, next) => {
+// --- Auth routes (public) ---
+
+app.post('/api/auth/login', async (req, res, next) => {
   try {
-    const teams = db.prepare('SELECT * FROM teams').all();
-    res.json(teams.map(team => ({
-      id: team.id,
-      name: team.name,
-      colorIndex: team.colorIndex,
-      colors: {
-        bg: team.bgColor,
-        border: team.borderColor,
-        text: team.textColor
-      }
-    })));
+    const { username, password } = req.body;
+    if (!username?.trim() || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+
+    const user = db
+      .prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE')
+      .get(username.trim());
+    if (!user || !(await verifyPassword(password, user.password_hash))) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    const sessionId = generateId();
+    db.prepare('INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)').run(
+      sessionId,
+      user.id,
+      sessionExpiryDate()
+    );
+
+    res.cookie(SESSION_COOKIE, sessionId, {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: SESSION_DAYS * 24 * 60 * 60 * 1000,
+      path: '/',
+    });
+
+    res.json({
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      teamId: user.team_id ?? null,
+    });
   } catch (error) {
     next(error);
   }
 });
 
-app.post('/api/teams', (req, res, next) => {
-  const { id, name, colorIndex, colors } = req.body;
+app.post('/api/auth/logout', (req, res) => {
+  const sessionId = parseSessionCookie(req);
+  if (sessionId) {
+    db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
+  }
+  res.clearCookie(SESSION_COOKIE, { path: '/' });
+  res.json({ success: true });
+});
+
+app.get('/api/auth/me', (req, res) => {
+  const sessionId = parseSessionCookie(req);
+  const user = getSessionUser(db, sessionId);
+  if (!user) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  res.json(user);
+});
+
+// --- Protected routes ---
+
+app.get('/api/teams', requireAuth, (req, res, next) => {
   try {
-    if (!id || !name || colorIndex === undefined || !colors) {
+    const teams = db.prepare('SELECT * FROM teams ORDER BY name COLLATE NOCASE').all();
+    const mapped = teams.map((team) => mapTeamRow(db, team));
+    const visible =
+      req.user.role === 'admin' ? mapped : mapped.filter((team) => team.listed);
+    res.json(visible);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/teams', requireAuth, requireAdmin, (req, res, next) => {
+  try {
+    const { id, name } = req.body;
+    if (!id || !name?.trim()) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    db.prepare(`
-      INSERT INTO teams (id, name, colorIndex, bgColor, borderColor, textColor)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, name, colorIndex, colors.bg, colors.border, colors.text);
-    
-    res.status(201).json({ success: true });
+    db.prepare(
+      `INSERT INTO teams (id, name, colorIndex, bgColor, borderColor, textColor)
+       VALUES (?, ?, NULL, NULL, NULL, NULL)`
+    ).run(id, name.trim());
+
+    const team = db.prepare('SELECT * FROM teams WHERE id = ?').get(id);
+    res.status(201).json(mapTeamRow(db, team));
   } catch (error) {
     next(error);
   }
 });
 
-app.delete('/api/teams/:id', (req, res, next) => {
-  const { id } = req.params;
+app.put('/api/teams/:id/credentials', requireAuth, requireAdmin, async (req, res, next) => {
   try {
+    const { id } = req.params;
+    const { username, password, role, listed } = req.body;
+
+    if (!username?.trim()) {
+      return res.status(400).json({ error: 'Username is required' });
+    }
+    if (!['admin', 'member'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+
+    const team = db.prepare('SELECT * FROM teams WHERE id = ?').get(id);
+    if (!team) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+
+    const trimmedUsername = username.trim();
+    const existingUser = db.prepare('SELECT id, password_hash FROM users WHERE team_id = ?').get(id);
+    if (!existingUser && !password) {
+      return res.status(400).json({ error: 'Password is required' });
+    }
+    const duplicate = db
+      .prepare('SELECT id FROM users WHERE username = ? COLLATE NOCASE AND id != ?')
+      .get(trimmedUsername, existingUser?.id ?? '');
+    if (duplicate) {
+      return res.status(409).json({ error: 'Username already in use' });
+    }
+
+    const passwordHash = password ? await hashPassword(password) : null;
+    const listedValue = listed === false ? 0 : 1;
+
+    const assignColors = () => {
+      const colorIndex = pickAvailableColorIndex(db);
+      const colors = TEAM_COLOR_PALETTE[colorIndex];
+      db.prepare(
+        `UPDATE teams SET colorIndex = ?, bgColor = ?, borderColor = ?, textColor = ? WHERE id = ?`
+      ).run(colorIndex, colors.bg, colors.border, colors.text, id);
+    };
+
+    if (existingUser) {
+      if (passwordHash) {
+        db.prepare(
+          `UPDATE users SET username = ?, password_hash = ?, role = ?, listed = ? WHERE team_id = ?`
+        ).run(trimmedUsername, passwordHash, role, listedValue, id);
+      } else {
+        db.prepare(
+          `UPDATE users SET username = ?, role = ?, listed = ? WHERE team_id = ?`
+        ).run(trimmedUsername, role, listedValue, id);
+      }
+      if (team.colorIndex == null) assignColors();
+    } else {
+      db.prepare(
+        `INSERT INTO users (id, username, password_hash, role, team_id, listed) VALUES (?, ?, ?, ?, ?, ?)`
+      ).run(generateId(), trimmedUsername, passwordHash, role, id, listedValue);
+      assignColors();
+    }
+
+    const updated = db.prepare('SELECT * FROM teams WHERE id = ?').get(id);
+    res.json(mapTeamRow(db, updated));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/api/teams/:id', requireAuth, requireAdmin, (req, res, next) => {
+  try {
+    const { id } = req.params;
     const team = db.prepare('SELECT id FROM teams WHERE id = ?').get(id);
     if (!team) {
       return res.status(404).json({ error: 'Team not found' });
     }
 
-    // With ON DELETE CASCADE, we don't need to manually delete events
+    db.prepare('DELETE FROM users WHERE team_id = ?').run(id);
     db.prepare('DELETE FROM teams WHERE id = ?').run(id);
     res.json({ success: true });
   } catch (error) {
@@ -107,43 +211,36 @@ app.delete('/api/teams/:id', (req, res, next) => {
   }
 });
 
-// Event endpoints
-app.get('/api/events', (req, res, next) => {
+app.get('/api/events', requireAuth, (req, res, next) => {
   try {
     const events = db.prepare('SELECT * FROM events').all();
-    const teams = db.prepare('SELECT * FROM teams').all();
-    
-    const teamMap = new Map(teams.map(team => [team.id, {
-      bgColor: team.bgColor,
-      borderColor: team.borderColor,
-      textColor: team.textColor
-    }]));
-
-    res.json(events.map(event => {
-      const teamColors = teamMap.get(event.teamId);
-      if (!teamColors) {
-        return null;
-      }
-      return {
-        id: event.id,
-        title: event.title,
-        description: event.description,
-        start: event.start,
-        end: event.end,
-        employeeId: event.teamId,
-        backgroundColor: teamColors.bgColor,
-        borderColor: teamColors.borderColor,
-        textColor: teamColors.textColor
-      };
-    }).filter(Boolean));
+    res.json(
+      events
+        .map((event) => {
+          const teamColors = getTeamColors(db, event.teamId);
+          if (!teamColors) return null;
+          return {
+            id: event.id,
+            title: event.title,
+            description: event.description,
+            start: event.start,
+            end: event.end,
+            employeeId: event.teamId,
+            backgroundColor: teamColors.bg,
+            borderColor: teamColors.border,
+            textColor: teamColors.text,
+          };
+        })
+        .filter(Boolean)
+    );
   } catch (error) {
     next(error);
   }
 });
 
-app.post('/api/events', (req, res, next) => {
-  const { id, title, description, start, end, employeeId } = req.body;
+app.post('/api/events', requireAuth, requireAdmin, (req, res, next) => {
   try {
+    const { id, title, description, start, end, employeeId } = req.body;
     if (!id || !title || !start || !end || !employeeId) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -153,21 +250,21 @@ app.post('/api/events', (req, res, next) => {
       return res.status(404).json({ error: 'Team not found' });
     }
 
-    db.prepare(`
-      INSERT INTO events (id, title, description, start, end, teamId)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, title, description, start, end, employeeId);
-    
+    db.prepare(
+      `INSERT INTO events (id, title, description, start, end, teamId)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).run(id, title, description ?? null, start, end, employeeId);
+
     res.status(201).json({ success: true });
   } catch (error) {
     next(error);
   }
 });
 
-app.put('/api/events/:id', (req, res, next) => {
-  const { id } = req.params;
-  const { start, end, description } = req.body;
+app.put('/api/events/:id', requireAuth, requireAdmin, (req, res, next) => {
   try {
+    const { id } = req.params;
+    const { start, end, description } = req.body;
     if (!start || !end) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -177,18 +274,22 @@ app.put('/api/events/:id', (req, res, next) => {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    db.prepare('UPDATE events SET start = ?, end = ?, description = ? WHERE id = ?')
-      .run(start, end, description, id);
-    
+    db.prepare('UPDATE events SET start = ?, end = ?, description = ? WHERE id = ?').run(
+      start,
+      end,
+      description ?? null,
+      id
+    );
+
     res.json({ success: true });
   } catch (error) {
     next(error);
   }
 });
 
-app.delete('/api/events/:id', (req, res, next) => {
-  const { id } = req.params;
+app.delete('/api/events/:id', requireAuth, requireAdmin, (req, res, next) => {
   try {
+    const { id } = req.params;
     const event = db.prepare('SELECT id FROM events WHERE id = ?').get(id);
     if (!event) {
       return res.status(404).json({ error: 'Event not found' });

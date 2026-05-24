@@ -1,55 +1,36 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PlusCircle } from 'lucide-react';
-import type { Team } from '../types';
-import { TEAM_COLORS } from '../utils/colors';
 import { generateId } from '../utils/id';
 
 interface Props {
-  onAddTeam: (team: Team) => void;
-  usedColors: Set<number>;
+  onAddTeam: (payload: { id: string; name: string }) => void;
 }
 
-export default function TeamForm({ onAddTeam, usedColors }: Props) {
+export default function TeamForm({ onAddTeam }: Props) {
   const { t } = useTranslation();
   const [name, setName] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim()) {
-      const availableIndices = Array.from(
-        { length: TEAM_COLORS.length },
-        (_, i) => i
-      ).filter(i => !usedColors.has(i));
-
-      const colorIndex = availableIndices.length > 0
-        ? availableIndices[Math.floor(Math.random() * availableIndices.length)]
-        : Math.floor(Math.random() * TEAM_COLORS.length);
-
-      const team: Team = {
-        id: generateId(),
-        name: name.trim(),
-        colors: TEAM_COLORS[colorIndex],
-        colorIndex
-      };
-      
-      onAddTeam(team);
+      onAddTeam({ id: generateId(), name: name.trim() });
       setName('');
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2">
+    <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2">
       <input
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder={t('addTeam.placeholder')}
-        className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <button
         type="submit"
-        className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+        className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shrink-0"
       >
         <PlusCircle size={20} />
         {t('addTeam.button')}

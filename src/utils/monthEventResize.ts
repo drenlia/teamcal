@@ -32,6 +32,19 @@ export type MonthResizeComplete = (
   end: Date
 ) => void;
 
+let suppressEventClickUntil = 0;
+
+const SUPPRESS_CLICK_MS = 300;
+
+/** Ignore eventClick briefly after resize (blocks the spurious mouseup click). */
+export function suppressEventClickAfterResize(): void {
+  suppressEventClickUntil = Date.now() + SUPPRESS_CLICK_MS;
+}
+
+export function consumeEventClickSuppression(): boolean {
+  return Date.now() < suppressEventClickUntil;
+}
+
 /** FullCalendar disables resize for timed events in month view; wire custom edge handles. */
 export function attachMonthResizeHandles(
   info: EventMountArg,
@@ -62,6 +75,7 @@ export function attachMonthResizeHandles(
       if (!initialStart || !initialEnd) return;
 
       document.body.classList.add('teamcal-resizing');
+      let didResize = false;
 
       const onMouseMove = (moveEvent: MouseEvent) => {
         const day = dateFromDayCell(calendarEl, moveEvent.clientX, moveEvent.clientY);
@@ -71,11 +85,13 @@ export function attachMonthResizeHandles(
           const newStart = combineDateAndTime(day, formatTime(initialStart));
           if (newStart < initialEnd) {
             event.setDates(newStart, initialEnd);
+            didResize = true;
           }
         } else if (edge === 'end' && info.isEnd) {
           const newEnd = combineDateAndTime(day, formatTime(initialEnd));
           if (newEnd > initialStart) {
             event.setDates(initialStart, newEnd);
+            didResize = true;
           }
         }
       };
@@ -84,6 +100,10 @@ export function attachMonthResizeHandles(
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
         document.body.classList.remove('teamcal-resizing');
+
+        if (didResize) {
+          suppressEventClickAfterResize();
+        }
 
         if (event.start && event.end) {
           onComplete(event.id, new Date(event.start), new Date(event.end));

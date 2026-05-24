@@ -21,10 +21,22 @@
 }
 
 .fc .fc-event {
-  @apply cursor-pointer transition-all hover:shadow-md;
+  @apply cursor-pointer transition-all hover:shadow-md overflow-hidden;
 }
 
-/* Let FullCalendar handle drag/resize on the event shell, not custom content */
+/* Contain custom bar content within event cells */
+.fc .fc-daygrid-block-event,
+.fc .fc-daygrid-event,
+.fc .fc-timegrid-event {
+  @apply overflow-hidden;
+}
+
+.fc .fc-event-main-frame,
+.fc .fc-event-main {
+  @apply min-w-0 overflow-hidden;
+}
+
+/* Drag/resize on the event shell; interactive controls opt in with pointer-events-auto */
 .fc .fc-event-main {
   pointer-events: none;
 }
@@ -47,7 +59,7 @@
 
 /* Improve month view spacing */
 .fc .fc-daygrid-event {
-  @apply my-0.5 h-6 relative;
+  @apply my-0.5 min-h-6 relative;
 }
 
 .fc .fc-daygrid-day-events {

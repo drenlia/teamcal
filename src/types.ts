@@ -1,3 +1,12 @@
+export type UserRole = 'admin' | 'member';
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  role: UserRole;
+  teamId: string | null;
+}
+
 export interface TeamColors {
   bg: string;
   border: string;
@@ -7,8 +16,12 @@ export interface TeamColors {
 export interface Team {
   id: string;
   name: string;
-  colors: TeamColors;
-  colorIndex: number;
+  colors: TeamColors | null;
+  colorIndex: number | null;
+  hasCredentials: boolean;
+  username: string | null;
+  role: UserRole | null;
+  listed: boolean;
 }
 
 export interface ScheduleEvent {
@@ -22,4 +35,11 @@ export interface ScheduleEvent {
   borderColor: string;
   textColor: string;
   allDay?: boolean;
+}
+
+export interface MemberCredentialsInput {
+  username: string;
+  password?: string;
+  role: UserRole;
+  listed: boolean;
 }

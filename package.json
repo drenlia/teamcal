@@ -15,8 +15,11 @@
     "@fullcalendar/interaction": "^6.1.11",
     "@fullcalendar/react": "^6.1.11",
     "@fullcalendar/timegrid": "^6.1.11",
+    "@tippyjs/react": "^4.2.6",
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^9.4.3",
     "concurrently": "^8.2.2",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "express": "^4.18.3",
     "i18next": "^23.10.1",
@@ -25,7 +28,6 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-i18next": "^14.1.0",
-    "@tippyjs/react": "^4.2.6",
     "tippy.js": "^6.3.7"
   },
   "devDependencies": {

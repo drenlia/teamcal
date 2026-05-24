@@ -16,3 +16,9 @@ export const TEAM_COLORS = [
   { bg: '#FFF3E0', border: '#FF5722', text: '#D84315' }, // Deep Orange
   { bg: '#F3E5F5', border: '#673AB7', text: '#4527A0' }, // Deep Purple
 ];
+
+export const UNASSIGNED_EVENT_COLORS = {
+  bg: '#F5F5F5',
+  border: '#9E9E9E',
+  text: '#424242',
+};
