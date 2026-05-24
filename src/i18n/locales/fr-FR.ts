@@ -1,0 +1,75 @@
+export const frFR = {
+  title: 'Planning d\'équipe',
+  addTeam: {
+    placeholder: 'Nom du membre',
+    button: 'Ajouter un membre',
+  },
+  timeSettings: {
+    to: 'à',
+    label: 'Heures de quart par défaut',
+  },
+  timeInput: {
+    hour: 'Heure',
+    minute: 'Minute',
+    period: 'Période',
+    am: 'AM',
+    pm: 'PM',
+    start: 'Heure de début',
+    end: 'Heure de fin',
+    endBeforeStart:
+      'L\'heure de fin doit être après l\'heure de début le même jour.',
+    presets: {
+      day: 'Jour (7h–15h)',
+      standard: 'Standard (9h–17h)',
+      evening: 'Soir (15h–23h)',
+      night: 'Nuit (23h–7h)',
+    },
+  },
+  buttons: {
+    print: 'Imprimer le calendrier',
+    cancel: 'Annuler',
+    save: 'Enregistrer',
+    delete: 'Supprimer',
+  },
+  warnings: {
+    selectTeam: 'Veuillez sélectionner un membre avant de planifier',
+  },
+  calendar: {
+    today: 'aujourd\'hui',
+    month: 'Mois',
+    week: 'Semaine',
+    day: 'Jour',
+  },
+  eventDialog: {
+    title: 'Modifier le quart',
+    start: 'Début',
+    end: 'Fin',
+    date: 'Date',
+    quickShifts: 'Quarts rapides',
+    description: 'Description',
+    descriptionPlaceholder: 'Ajouter une description…',
+    delete: 'Supprimer le quart',
+    deleteConfirmTitle: 'Supprimer ce quart ?',
+    deleteConfirmMessage:
+      'Ce quart sera retiré du planning. Cette action est irréversible.',
+  },
+  language: {
+    label: 'Langue',
+    en: 'English',
+    pt: 'Português',
+    fr: 'Français',
+  },
+  notifications: {
+    loadError: 'Impossible de charger le planning. Actualisez la page.',
+    teamAdded: 'Membre ajouté',
+    teamAddError: 'Échec de l\'ajout du membre',
+    teamRemoved: 'Membre retiré',
+    teamRemoveError: 'Échec de la suppression du membre',
+    eventAdded: 'Quart ajouté',
+    eventAddError: 'Échec de l\'ajout du quart',
+    eventRemoved: 'Quart supprimé',
+    eventRemoveError: 'Échec de la suppression du quart',
+    eventUpdated: 'Quart mis à jour',
+    eventUpdateError: 'Échec de la mise à jour du quart',
+  },
+};
