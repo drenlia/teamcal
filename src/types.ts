@@ -43,3 +43,11 @@ export interface MemberCredentialsInput {
   role: UserRole;
   listed: boolean;
 }
+
+export interface AppConfig {
+  demoMode: boolean;
+  demoAdmin?: {
+    username: string;
+    password: string;
+  };
+}

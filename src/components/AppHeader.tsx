@@ -7,6 +7,7 @@ import TeamForm from './TeamForm';
 import TeamList from './TeamList';
 import IconButton from './IconButton';
 import { useAdminPanelOpen } from '../hooks/useAdminPanelOpen';
+import { useDemoCountdown } from '../hooks/useDemoCountdown';
 import type { Team, UserRole } from '../types';
 import type { TimeValue } from '../utils/timeParts';
 
@@ -25,6 +26,7 @@ interface AppHeaderProps {
   onManageMember: (team: Team) => void;
   onPrint: () => void;
   onLogout: () => void;
+  demoMode?: boolean;
 }
 
 export default function AppHeader({
@@ -42,9 +44,11 @@ export default function AppHeader({
   onManageMember,
   onPrint,
   onLogout,
+  demoMode = false,
 }: AppHeaderProps) {
   const { t } = useTranslation();
   const { adminPanelOpen, toggleAdminPanel } = useAdminPanelOpen();
+  const { minutesUntilReset, secondsUntilReset } = useDemoCountdown(demoMode);
 
   return (
     <div className="space-y-5">
@@ -72,11 +76,21 @@ export default function AppHeader({
         <div className="flex items-center gap-2 shrink-0 bg-gray-50 border border-gray-200 rounded-xl px-2 py-1.5 shadow-sm">
           <LanguageSwitcher />
           <div className="w-px h-5 bg-gray-200" aria-hidden />
-          <IconButton
-            icon={Printer}
-            label={t('buttons.print')}
-            onClick={onPrint}
-          />
+          <div className="relative">
+            {demoMode && (
+              <div className="absolute -top-6 right-0 text-red-600 text-xs font-medium whitespace-nowrap">
+                {t('demo.resetCountdown', {
+                  minutes: minutesUntilReset,
+                  seconds: secondsUntilReset,
+                })}
+              </div>
+            )}
+            <IconButton
+              icon={Printer}
+              label={t('buttons.print')}
+              onClick={onPrint}
+            />
+          </div>
           <IconButton
             icon={LogOut}
             label={t('auth.signOut')}

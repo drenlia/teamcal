@@ -1,19 +1,32 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LogIn } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
 
+interface DemoAdmin {
+  username: string;
+  password: string;
+}
+
 interface Props {
   onLogin: (username: string, password: string) => Promise<void>;
   error?: string | null;
+  demoAdmin?: DemoAdmin | null;
 }
 
-export default function LoginPage({ onLogin, error }: Props) {
+export default function LoginPage({ onLogin, error, demoAdmin }: Props) {
   const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (demoAdmin) {
+      setUsername(demoAdmin.username);
+      setPassword(demoAdmin.password);
+    }
+  }, [demoAdmin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +42,7 @@ export default function LoginPage({ onLogin, error }: Props) {
   };
 
   const displayError = localError || error;
+  const isDemoLogin = Boolean(demoAdmin);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
@@ -39,6 +53,18 @@ export default function LoginPage({ onLogin, error }: Props) {
         <div className="bg-white rounded-xl shadow-sm p-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-1">{t('title')}</h1>
           <p className="text-sm text-gray-600 mb-6">{t('auth.signInSubtitle')}</p>
+
+          {demoAdmin && (
+            <div className="text-sm bg-amber-50 text-amber-900 px-3 py-2 rounded-lg mb-4 border border-amber-200">
+              <p className="font-medium">{t('demo.loginTitle')}</p>
+              <p className="mt-1">
+                {t('auth.username')}: <span className="font-mono">{demoAdmin.username}</span>
+              </p>
+              <p>
+                {t('auth.password')}: <span className="font-mono">{demoAdmin.password}</span>
+              </p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -61,7 +87,7 @@ export default function LoginPage({ onLogin, error }: Props) {
               </label>
               <input
                 id="password"
-                type="password"
+                type={isDemoLogin ? 'text' : 'password'}
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

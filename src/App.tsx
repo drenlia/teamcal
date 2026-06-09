@@ -15,7 +15,7 @@ import type {
 import { AlertCircle } from 'lucide-react';
 import AppHeader from './components/AppHeader';
 import CalendarEventBar from './components/CalendarEventBar';
-import type { Team, ScheduleEvent } from './types';
+import type { Team, ScheduleEvent, AppConfig } from './types';
 import EventDialog from './components/EventDialog';
 import ConfirmDialog from './components/ConfirmDialog';
 import LoginPage from './components/LoginPage';
@@ -52,6 +52,7 @@ function App() {
   const [pendingDeleteEventId, setPendingDeleteEventId] = useState<string | null>(null);
   const [pendingDeleteTeam, setPendingDeleteTeam] = useState<Team | null>(null);
   const [credentialsTeam, setCredentialsTeam] = useState<Team | null>(null);
+  const [appConfig, setAppConfig] = useState<AppConfig>({ demoMode: false });
 
   const isAdmin = user?.role === 'admin';
 
@@ -68,6 +69,12 @@ function App() {
   }, [i18n.language]);
 
   const use12HourClock = normalizeLanguage(i18n.language) === 'en';
+
+  useEffect(() => {
+    api.fetchAppConfig()
+      .then(setAppConfig)
+      .catch((err) => console.error('Failed to load app config:', err));
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -451,7 +458,12 @@ function App() {
   }
 
   if (!user) {
-    return <LoginPage onLogin={login} />;
+    return (
+      <LoginPage
+        onLogin={login}
+        demoAdmin={appConfig.demoMode ? appConfig.demoAdmin : undefined}
+      />
+    );
   }
 
   return (
@@ -476,6 +488,7 @@ function App() {
             onManageMember={setCredentialsTeam}
             onPrint={handlePrint}
             onLogout={() => void logout()}
+            demoMode={appConfig.demoMode}
           />
 
           {isAdmin && showSelectionWarning && (

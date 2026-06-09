@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "concurrently \"vite\" \"node src/server/index.js\"",
     "build": "vite build",
+    "start": "node src/server/index.js",
+    "docker:dev": "docker compose -f docker-compose.dev.yml up --build",
+    "docker:prod": "docker compose up --build -d",
     "lint": "eslint .",
     "preview": "vite preview"
   },

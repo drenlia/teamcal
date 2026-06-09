@@ -1,0 +1,22 @@
+services:
+  teamcal:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "${PORT:-3004}:3004"
+    environment:
+      NODE_ENV: development
+      DEMO_MODE: ${DEMO_MODE:-false}
+      DATABASE_PATH: /app/data/schedule.db
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - .:/app
+      - teamcal_node_modules:/app/node_modules
+      - teamcal-dev-data:/app/data
+    stdin_open: true
+    tty: true
+
+volumes:
+  teamcal_node_modules:
+  teamcal-dev-data:

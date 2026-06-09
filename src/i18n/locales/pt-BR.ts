@@ -93,6 +93,10 @@ export const ptBR = {
     adminSubtitle: 'Gerencie membros, turnos e horários padrão',
     adminPanel: 'Horários padrão e gestão de membros',
   },
+  demo: {
+    resetCountdown: 'Esta demonstração será reiniciada em {{minutes}}m {{seconds}}s',
+    loginTitle: 'Login de administrador da demonstração (preenchido abaixo)',
+  },
   notifications: {
     loadError: 'Não foi possível carregar a agenda. Atualize a página.',
     teamAdded: 'Membro adicionado com sucesso',

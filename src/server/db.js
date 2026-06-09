@@ -1,11 +1,17 @@
 import Database from 'better-sqlite3';
+import { mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { runMigrations } from './migrations.js';
-import { ensureAdminUser, printAdminCredentials } from './auth.js';
+import { ensureAdminUser, printAdminCredentials, prepareDemoAdminCredentials } from './auth.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-export const dbPath = join(__dirname, 'schedule.db');
+const configuredPath = process.env.DATABASE_PATH;
+export const dbPath = configuredPath || join(__dirname, 'schedule.db');
+
+if (configuredPath) {
+  mkdirSync(dirname(configuredPath), { recursive: true });
+}
 
 export async function initializeDatabase() {
   const db = new Database(dbPath);
@@ -38,6 +44,7 @@ export async function initializeDatabase() {
   if (adminCreds) {
     printAdminCredentials(adminCreds.username, adminCreds.password);
   }
+  await prepareDemoAdminCredentials(db, adminCreds);
 
   return db;
 }

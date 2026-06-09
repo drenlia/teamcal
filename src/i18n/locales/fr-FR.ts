@@ -94,6 +94,10 @@ export const frFR = {
     adminSubtitle: 'Gérer les membres, quarts et heures par défaut',
     adminPanel: 'Heures par défaut et gestion des membres',
   },
+  demo: {
+    resetCountdown: 'Cette démo sera réinitialisée dans {{minutes}}m {{seconds}}s',
+    loginTitle: 'Connexion admin démo (préremplie ci-dessous)',
+  },
   notifications: {
     loadError: 'Impossible de charger le planning. Actualisez la page.',
     teamAdded: 'Membre ajouté',

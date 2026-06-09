@@ -6,6 +6,17 @@ export const SESSION_DAYS = 7;
 export const ADMIN_USERNAME = 'admin';
 export const BCRYPT_ROUNDS = 12;
 
+/** @type {{ username: string; password: string } | null} */
+let demoAdminCredentials = null;
+
+export function isDemoMode() {
+  return process.env.DEMO_MODE === 'true';
+}
+
+export function getDemoAdminCredentials() {
+  return demoAdminCredentials;
+}
+
 export function generateId() {
   return crypto.randomUUID();
 }
@@ -60,6 +71,31 @@ export async function ensureAdminUser(db) {
   ).run(id, ADMIN_USERNAME, passwordHash);
 
   return { username: ADMIN_USERNAME, password };
+}
+
+/**
+ * In demo mode, keep bootstrap admin credentials in memory for /api/config.
+ * Reuses freshly created credentials or rotates the password for an existing admin.
+ * @param {import('better-sqlite3').Database} db
+ * @param {{ username: string; password: string } | null} newlyCreatedCreds
+ */
+export async function prepareDemoAdminCredentials(db, newlyCreatedCreds) {
+  if (!isDemoMode()) return;
+
+  if (newlyCreatedCreds) {
+    demoAdminCredentials = { ...newlyCreatedCreds };
+    return;
+  }
+
+  const existing = db
+    .prepare("SELECT id FROM users WHERE role = 'admin' AND team_id IS NULL LIMIT 1")
+    .get();
+  if (!existing) return;
+
+  const password = generatePassword();
+  const passwordHash = await hashPassword(password);
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, existing.id);
+  demoAdminCredentials = { username: ADMIN_USERNAME, password };
 }
 
 export function parseSessionCookie(req) {

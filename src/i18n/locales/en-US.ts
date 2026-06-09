@@ -93,6 +93,10 @@ export const enUS = {
     adminSubtitle: 'Manage members, shifts, and default hours',
     adminPanel: 'Default shift hours & member management',
   },
+  demo: {
+    resetCountdown: 'This demo will reset in {{minutes}}m {{seconds}}s',
+    loginTitle: 'Demo admin login (prefilled below)',
+  },
   notifications: {
     loadError: 'Could not load the schedule. Please refresh the page.',
     teamAdded: 'Team member added successfully',

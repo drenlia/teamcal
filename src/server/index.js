@@ -1,6 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import { existsSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import {
   initializeDatabase,
   dbPath,
@@ -20,7 +23,13 @@ import {
   requireAdmin,
   getSessionUser,
   parseSessionCookie,
+  isDemoMode,
+  getDemoAdminCredentials,
 } from './auth.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const isProduction = process.env.NODE_ENV === 'production';
+const distPath = join(__dirname, '../../dist');
 
 const db = await initializeDatabase();
 const app = express();
@@ -36,6 +45,20 @@ app.use((err, req, res, next) => {
     error: 'An unexpected error occurred',
     details: err.message,
   });
+});
+
+// --- Public config ---
+
+app.get('/api/config', (req, res) => {
+  const demoMode = isDemoMode();
+  const config = { demoMode };
+  if (demoMode) {
+    const demoAdmin = getDemoAdminCredentials();
+    if (demoAdmin) {
+      config.demoAdmin = demoAdmin;
+    }
+  }
+  res.json(config);
 });
 
 // --- Auth routes (public) ---
@@ -302,8 +325,18 @@ app.delete('/api/events/:id', requireAuth, requireAdmin, (req, res, next) => {
   }
 });
 
-const port = 3111;
-app.listen(port, () => {
+if (isProduction && existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => {
+    if (req.path.startsWith('/api')) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    res.sendFile(join(distPath, 'index.html'));
+  });
+}
+
+const port = Number(process.env.PORT) || 3111;
+app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
   console.log(`Database initialized at ${dbPath}`);
 });

@@ -1,4 +1,4 @@
-import type { AuthUser, Team, ScheduleEvent, MemberCredentialsInput } from '../types';
+import type { AuthUser, Team, ScheduleEvent, MemberCredentialsInput, AppConfig } from '../types';
 
 const API_URL = '/api';
 
@@ -51,6 +51,14 @@ export async function logout(): Promise<void> {
 export async function fetchCurrentUser(): Promise<AuthUser | null> {
   const response = await apiFetch('/auth/me');
   if (response.status === 401) return null;
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+  return response.json();
+}
+
+export async function fetchAppConfig(): Promise<AppConfig> {
+  const response = await apiFetch('/config');
   if (!response.ok) {
     throw new Error(await parseError(response));
   }
