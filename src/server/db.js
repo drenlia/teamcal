@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { runMigrations } from './migrations.js';
 import { ensureAdminUser, printAdminCredentials, prepareDemoAdminCredentials } from './auth.js';
+import { seedDemoData } from './demoSeed.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const configuredPath = process.env.DATABASE_PATH;
@@ -45,6 +46,7 @@ export async function initializeDatabase() {
     printAdminCredentials(adminCreds.username, adminCreds.password);
   }
   await prepareDemoAdminCredentials(db, adminCreds);
+  await seedDemoData(db);
 
   return db;
 }
