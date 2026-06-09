@@ -37,7 +37,10 @@ export const enUS = {
     today: 'today',
     month: 'Month',
     week: 'Week',
-    day: 'Day'
+    day: 'Day',
+    showOnlyMember: 'Show only this member on the calendar',
+    showAllMembers: 'Show all members',
+    filterActive: 'Calendar filtered to one member.',
   },
   eventDialog: {
     title: 'Edit Event Time',

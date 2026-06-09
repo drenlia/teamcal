@@ -27,6 +27,8 @@ interface AppHeaderProps {
   onPrint: () => void;
   onLogout: () => void;
   demoMode?: boolean;
+  calendarSoloTeamId: string | null;
+  onToggleCalendarSolo: (id: string) => void;
 }
 
 export default function AppHeader({
@@ -45,6 +47,8 @@ export default function AppHeader({
   onPrint,
   onLogout,
   demoMode = false,
+  calendarSoloTeamId,
+  onToggleCalendarSolo,
 }: AppHeaderProps) {
   const { t } = useTranslation();
   const { adminPanelOpen, toggleAdminPanel } = useAdminPanelOpen();
@@ -136,11 +140,13 @@ export default function AppHeader({
       <TeamList
         teams={teams}
         selectedTeam={selectedTeam}
+        calendarSoloTeamId={calendarSoloTeamId}
         isAdmin={isAdmin}
         readOnly={!isAdmin}
         onSelectTeam={onSelectTeam}
         onRemoveTeam={onRemoveTeam}
         onManageMember={onManageMember}
+        onToggleCalendarSolo={onToggleCalendarSolo}
       />
     </div>
   );

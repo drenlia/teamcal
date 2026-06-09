@@ -39,6 +39,9 @@ export const frFR = {
     month: 'Mois',
     week: 'Semaine',
     day: 'Jour',
+    showOnlyMember: 'Afficher uniquement ce membre sur le calendrier',
+    showAllMembers: 'Afficher tous les membres',
+    filterActive: 'Calendrier filtré sur un membre.',
   },
   eventDialog: {
     title: 'Modifier le quart',

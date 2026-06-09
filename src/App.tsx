@@ -53,6 +53,7 @@ function App() {
   const [pendingDeleteTeam, setPendingDeleteTeam] = useState<Team | null>(null);
   const [credentialsTeam, setCredentialsTeam] = useState<Team | null>(null);
   const [appConfig, setAppConfig] = useState<AppConfig>({ demoMode: false });
+  const [calendarSoloTeamId, setCalendarSoloTeamId] = useState<string | null>(null);
 
   const isAdmin = user?.role === 'admin';
 
@@ -147,10 +148,16 @@ function App() {
     return newDate;
   };
 
-  const calendarEvents = useMemo(
-    () => events.map(toFullCalendarEvent),
-    [events]
-  );
+  const calendarEvents = useMemo(() => {
+    const visible = calendarSoloTeamId
+      ? events.filter((event) => event.employeeId === calendarSoloTeamId)
+      : events;
+    return visible.map(toFullCalendarEvent);
+  }, [events, calendarSoloTeamId]);
+
+  const handleToggleCalendarSolo = useCallback((teamId: string) => {
+    setCalendarSoloTeamId((current) => (current === teamId ? null : teamId));
+  }, []);
 
   const handleDateSelect = useCallback(
     async (selectInfo: DateSelectArg) => {
@@ -489,6 +496,8 @@ function App() {
             onPrint={handlePrint}
             onLogout={() => void logout()}
             demoMode={appConfig.demoMode}
+            calendarSoloTeamId={calendarSoloTeamId}
+            onToggleCalendarSolo={handleToggleCalendarSolo}
           />
 
           {isAdmin && showSelectionWarning && (

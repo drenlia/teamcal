@@ -25,16 +25,12 @@ function getScheduleWindow() {
   return { start, end };
 }
 
-/** @param {Date} from @param {Date} to */
-function* eachDay(from, to) {
-  const cursor = new Date(from);
-  cursor.setHours(0, 0, 0, 0);
-  const last = new Date(to);
-  last.setHours(0, 0, 0, 0);
-  while (cursor <= last) {
-    yield new Date(cursor);
-    cursor.setDate(cursor.getDate() + 1);
-  }
+/** @param {Date} a @param {Date} b */
+function daysBetween(a, b) {
+  const msPerDay = 86400000;
+  const utcA = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
+  const utcB = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
+  return Math.round((utcB - utcA) / msPerDay);
 }
 
 /**
@@ -67,6 +63,7 @@ function insertMembers(db, members, passwordHash) {
 }
 
 /**
+ * Two members on overlapping multi-day shifts at all times, plus a few one-day shifts.
  * @param {import('better-sqlite3').Database} db
  * @param {typeof DEMO_MEMBERS} members
  */
@@ -77,67 +74,58 @@ function insertShifts(db, members) {
   `);
 
   const { start, end } = getScheduleWindow();
-  let dayIndex = 0;
+  const totalDays = daysBetween(start, end) + 1;
 
-  const addShift = (member, startISO, endISO, description) => {
-    insertEvent.run(generateId(), member.name, description, startISO, endISO, member.id);
+  const addShift = (member, blockStart, blockEnd, startHour, endHour, description) => {
+    const sy = blockStart.getFullYear();
+    const sm = blockStart.getMonth() + 1;
+    const sd = blockStart.getDate();
+    const ey = blockEnd.getFullYear();
+    const em = blockEnd.getMonth() + 1;
+    const ed = blockEnd.getDate();
+    insertEvent.run(
+      generateId(),
+      member.name,
+      description,
+      toISO(sy, sm, sd, startHour, 0),
+      toISO(ey, em, ed, endHour, 0),
+      member.id
+    );
   };
 
-  for (const day of eachDay(start, end)) {
-    const year = day.getFullYear();
-    const month = day.getMonth() + 1;
-    const date = day.getDate();
-    const weekday = day.getDay();
+  let cursor = new Date(start);
+  let pairIndex = 0;
 
-    const primary = members[dayIndex % members.length];
-    const secondary = members[(dayIndex + 1) % members.length];
-    const tertiary = members[(dayIndex + 2) % members.length];
-    const overlap = members[(dayIndex + 3) % members.length];
+  while (cursor <= end) {
+    const durationDays = 3 + (pairIndex % 3);
+    const memberA = members[pairIndex % members.length];
+    const memberB = members[(pairIndex + 1) % members.length];
 
-    const nextDay = new Date(day);
-    nextDay.setDate(nextDay.getDate() + 1);
+    const blockStart = new Date(cursor);
+    const blockEnd = new Date(blockStart);
+    blockEnd.setDate(blockEnd.getDate() + durationDays + 1);
 
-    addShift(
-      primary,
-      toISO(year, month, date, 7, 0),
-      toISO(year, month, date, 15, 0),
-      'Day shift'
-    );
-    addShift(
-      secondary,
-      toISO(year, month, date, 15, 0),
-      toISO(year, month, date, 23, 0),
-      'Evening shift'
-    );
-    addShift(
-      tertiary,
-      toISO(year, month, date, 23, 0),
-      toISO(nextDay.getFullYear(), nextDay.getMonth() + 1, nextDay.getDate(), 7, 0),
-      'Night shift'
-    );
+    addShift(memberA, blockStart, blockEnd, 7, 7, `${durationDays + 1}-day coverage`);
+    addShift(memberB, blockStart, blockEnd, 19, 19, 'Overlapping coverage');
 
-    if (weekday >= 1 && weekday <= 5) {
-      addShift(
-        overlap,
-        toISO(year, month, date, 9, 0),
-        toISO(year, month, date, 17, 0),
-        'Standard shift (overlaps day coverage)'
-      );
-    }
+    cursor = new Date(blockStart);
+    cursor.setDate(cursor.getDate() + durationDays + 1);
+    pairIndex += 2;
+  }
 
-    if (weekday === 5) {
-      const weekend = members[(dayIndex + 4) % members.length];
-      const endDay = new Date(day);
-      endDay.setDate(endDay.getDate() + 3);
-      addShift(
-        weekend,
-        toISO(year, month, date, 23, 0),
-        toISO(endDay.getFullYear(), endDay.getMonth() + 1, endDay.getDate(), 7, 0),
-        'Extended weekend coverage'
-      );
-    }
+  const oneDayCount = 2 + Math.floor(Math.random() * 2);
+  const usedOffsets = new Set();
+  while (usedOffsets.size < oneDayCount) {
+    usedOffsets.add(Math.floor(Math.random() * totalDays));
+  }
 
-    dayIndex += 1;
+  for (const offset of usedOffsets) {
+    const day = new Date(start);
+    day.setDate(day.getDate() + offset);
+    if (day > end) continue;
+
+    const member = members[Math.floor(Math.random() * members.length)];
+    addShift(member, day, day, 9, 17, 'One-day shift');
   }
 }
 

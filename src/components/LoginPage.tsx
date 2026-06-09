@@ -54,18 +54,6 @@ export default function LoginPage({ onLogin, error, demoAdmin }: Props) {
           <h1 className="text-2xl font-bold text-gray-900 mb-1">{t('title')}</h1>
           <p className="text-sm text-gray-600 mb-6">{t('auth.signInSubtitle')}</p>
 
-          {demoAdmin && (
-            <div className="text-sm bg-amber-50 text-amber-900 px-3 py-2 rounded-lg mb-4 border border-amber-200">
-              <p className="font-medium">{t('demo.loginTitle')}</p>
-              <p className="mt-1">
-                {t('auth.username')}: <span className="font-mono">{demoAdmin.username}</span>
-              </p>
-              <p>
-                {t('auth.password')}: <span className="font-mono">{demoAdmin.password}</span>
-              </p>
-            </div>
-          )}
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
@@ -111,6 +99,18 @@ export default function LoginPage({ onLogin, error, demoAdmin }: Props) {
               {submitting ? t('auth.signingIn') : t('auth.signIn')}
             </button>
           </form>
+
+          {demoAdmin && (
+            <div className="mt-6 text-sm bg-gray-100 text-gray-600 px-3 py-2 rounded-lg border border-gray-200">
+              <p className="font-medium text-gray-700">{t('demo.loginTitle')}</p>
+              <p className="mt-1">
+                {t('auth.username')}: <span className="font-mono">{demoAdmin.username}</span>
+              </p>
+              <p>
+                {t('auth.password')}: <span className="font-mono">{demoAdmin.password}</span>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

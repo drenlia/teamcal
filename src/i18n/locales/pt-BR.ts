@@ -37,7 +37,10 @@ export const ptBR = {
     today: 'hoje',
     month: 'Mês',
     week: 'Semana',
-    day: 'Dia'
+    day: 'Dia',
+    showOnlyMember: 'Mostrar apenas este membro no calendário',
+    showAllMembers: 'Mostrar todos os membros',
+    filterActive: 'Calendário filtrado para um membro.',
   },
   eventDialog: {
     title: 'Editar Horário do Evento',
