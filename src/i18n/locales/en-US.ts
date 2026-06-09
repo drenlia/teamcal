@@ -98,7 +98,9 @@ export const enUS = {
   },
   demo: {
     resetCountdown: 'This demo will reset in {{minutes}}m {{seconds}}s',
-    loginTitle: 'Demo admin login (prefilled below)',
+    loginTitle: 'Demo admin login (prefilled)',
+    memberLoginTitle: 'Member logins (read-only view)',
+    memberLoginHint: 'Use any username below with password {{password}}. Click a name to prefill the form.',
   },
   notifications: {
     loadError: 'Could not load the schedule. Please refresh the page.',

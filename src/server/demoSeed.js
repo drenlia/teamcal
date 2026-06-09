@@ -3,6 +3,15 @@ import { pickAvailableColorIndex, TEAM_COLOR_PALETTE } from './db.js';
 
 const DEMO_MEMBER_PASSWORD = 'demo';
 
+export { DEMO_MEMBER_PASSWORD };
+
+export function getDemoMemberLogins() {
+  return DEMO_MEMBERS.map((member) => ({
+    name: member.name,
+    username: member.username,
+  }));
+}
+
 const DEMO_MEMBERS = [
   { id: 'demo-anna', name: 'Anna', username: 'anna' },
   { id: 'demo-ben', name: 'Ben', username: 'ben' },

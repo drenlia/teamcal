@@ -50,4 +50,9 @@ export interface AppConfig {
     username: string;
     password: string;
   };
+  demoMembers?: Array<{
+    name: string;
+    username: string;
+  }>;
+  demoMemberPassword?: string;
 }

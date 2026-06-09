@@ -98,7 +98,9 @@ export const ptBR = {
   },
   demo: {
     resetCountdown: 'Esta demonstração será reiniciada em {{minutes}}m {{seconds}}s',
-    loginTitle: 'Login de administrador da demonstração (preenchido abaixo)',
+    loginTitle: 'Login de administrador da demonstração (preenchido)',
+    memberLoginTitle: 'Logins de membros (somente leitura)',
+    memberLoginHint: 'Use qualquer usuário abaixo com a senha {{password}}. Clique em um nome para preencher o formulário.',
   },
   notifications: {
     loadError: 'Não foi possível carregar a agenda. Atualize a página.',

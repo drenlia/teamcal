@@ -99,7 +99,9 @@ export const frFR = {
   },
   demo: {
     resetCountdown: 'Cette démo sera réinitialisée dans {{minutes}}m {{seconds}}s',
-    loginTitle: 'Connexion admin démo (préremplie ci-dessous)',
+    loginTitle: 'Connexion admin démo (préremplie)',
+    memberLoginTitle: 'Connexions membres (lecture seule)',
+    memberLoginHint: 'Utilisez un identifiant ci-dessous avec le mot de passe {{password}}. Cliquez sur un nom pour remplir le formulaire.',
   },
   notifications: {
     loadError: 'Impossible de charger le planning. Actualisez la page.',

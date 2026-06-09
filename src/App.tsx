@@ -469,6 +469,8 @@ function App() {
       <LoginPage
         onLogin={login}
         demoAdmin={appConfig.demoMode ? appConfig.demoAdmin : undefined}
+        demoMembers={appConfig.demoMode ? appConfig.demoMembers : undefined}
+        demoMemberPassword={appConfig.demoMode ? appConfig.demoMemberPassword : undefined}
       />
     );
   }

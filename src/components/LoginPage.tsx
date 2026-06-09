@@ -8,13 +8,26 @@ interface DemoAdmin {
   password: string;
 }
 
+interface DemoMember {
+  name: string;
+  username: string;
+}
+
 interface Props {
   onLogin: (username: string, password: string) => Promise<void>;
   error?: string | null;
   demoAdmin?: DemoAdmin | null;
+  demoMembers?: DemoMember[];
+  demoMemberPassword?: string;
 }
 
-export default function LoginPage({ onLogin, error, demoAdmin }: Props) {
+export default function LoginPage({
+  onLogin,
+  error,
+  demoAdmin,
+  demoMembers,
+  demoMemberPassword,
+}: Props) {
   const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -41,8 +54,15 @@ export default function LoginPage({ onLogin, error, demoAdmin }: Props) {
     }
   };
 
+  const prefillMember = (memberUsername: string) => {
+    if (!demoMemberPassword) return;
+    setUsername(memberUsername);
+    setPassword(demoMemberPassword);
+  };
+
   const displayError = localError || error;
   const isDemoLogin = Boolean(demoAdmin);
+  const showDemoCard = demoAdmin || (demoMembers?.length && demoMemberPassword);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
@@ -100,15 +120,41 @@ export default function LoginPage({ onLogin, error, demoAdmin }: Props) {
             </button>
           </form>
 
-          {demoAdmin && (
-            <div className="mt-6 text-sm bg-gray-100 text-gray-600 px-3 py-2 rounded-lg border border-gray-200">
-              <p className="font-medium text-gray-700">{t('demo.loginTitle')}</p>
-              <p className="mt-1">
-                {t('auth.username')}: <span className="font-mono">{demoAdmin.username}</span>
-              </p>
-              <p>
-                {t('auth.password')}: <span className="font-mono">{demoAdmin.password}</span>
-              </p>
+          {showDemoCard && (
+            <div className="mt-6 text-sm bg-gray-100 text-gray-600 px-3 py-2 rounded-lg border border-gray-200 space-y-3">
+              {demoAdmin && (
+                <div>
+                  <p className="font-medium text-gray-700">{t('demo.loginTitle')}</p>
+                  <p className="mt-1">
+                    {t('auth.username')}: <span className="font-mono">{demoAdmin.username}</span>
+                  </p>
+                  <p>
+                    {t('auth.password')}: <span className="font-mono">{demoAdmin.password}</span>
+                  </p>
+                </div>
+              )}
+
+              {demoMembers?.length && demoMemberPassword && (
+                <div className={demoAdmin ? 'pt-3 border-t border-gray-200' : undefined}>
+                  <p className="font-medium text-gray-700">{t('demo.memberLoginTitle')}</p>
+                  <p className="mt-1">{t('demo.memberLoginHint', { password: demoMemberPassword })}</p>
+                  <ul className="mt-2 space-y-1">
+                    {demoMembers.map((member) => (
+                      <li key={member.username}>
+                        <button
+                          type="button"
+                          onClick={() => prefillMember(member.username)}
+                          className="text-left hover:text-gray-900 underline-offset-2 hover:underline"
+                        >
+                          <span className="font-medium">{member.name}</span>
+                          {' '}
+                          <span className="font-mono text-gray-500">({member.username})</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
         </div>

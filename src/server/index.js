@@ -26,6 +26,7 @@ import {
   isDemoMode,
   getDemoAdminCredentials,
 } from './auth.js';
+import { getDemoMemberLogins, DEMO_MEMBER_PASSWORD } from './demoSeed.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const isProduction = process.env.NODE_ENV === 'production';
@@ -57,6 +58,8 @@ app.get('/api/config', (req, res) => {
     if (demoAdmin) {
       config.demoAdmin = demoAdmin;
     }
+    config.demoMembers = getDemoMemberLogins();
+    config.demoMemberPassword = DEMO_MEMBER_PASSWORD;
   }
   res.json(config);
 });
